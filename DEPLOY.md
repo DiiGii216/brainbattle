@@ -18,7 +18,7 @@ Kein lokaler Rechner und kein `wrangler login` nötig. Einmalig im Cloudflare-Da
 
 ## Live-Smoke-Test (nach dem ersten Deploy)
 ```
-BASE=https://brainbattle.<subdomain>.workers.dev npx vite-node scripts/sim.ts   # braucht TIME_SCALE=1 → ~11,5 min; für einen Kurztest die Lobby/Beitritt manuell prüfen
+BASE=https://brainbattle.<subdomain>.workers.dev npx vite-node scripts/sim.ts   # echte Zeit: ~11 Min.
 ```
 Manuell: `/` öffnen → „Neuen Spielraum erstellen“ → Präsentationsansicht öffnen → mit dem Handy QR scannen → Spiel starten.
 Deep Links `/join/:code`, `/host/:code`, `/screen/:code` werden per SPA-Fallback der Static Assets ausgeliefert.

@@ -11,6 +11,7 @@ export function useRoom(code: string, helloFn: () => ClientMsg | null, onJoined?
   const [status, setStatus] = useState<Status>('connecting')
   const [err, setErr] = useState<RoomErr | null>(null)
   const [offset, setOffset] = useState(0)
+  const lastStep = useRef(-1)
   const ws = useRef<WebSocket | null>(null)
   const hello = useRef(helloFn); hello.current = helloFn
   const joined = useRef(onJoined); joined.current = onJoined
@@ -28,7 +29,7 @@ export function useRoom(code: string, helloFn: () => ClientMsg | null, onJoined?
       w.onopen = () => { tries = 0; w.send(JSON.stringify(h)); setStatus('open') }
       w.onmessage = (e) => {
         const m: ServerMsg = JSON.parse(e.data)
-        if (m.t === 'state') { setSnap(m.s); setOffset(m.s.now - Date.now()); setErr(null) }
+        if (m.t === 'state') { setSnap(m.s); setOffset(m.s.now - Date.now()); if (m.s.step !== lastStep.current) { lastStep.current = m.s.step; setErr(null) } }
         else if (m.t === 'joined') joined.current?.(m.token, m.id)
         else { setErr({ code: m.code, msg: m.msg }); if (FATAL.has(m.code)) stop = true }
       }
@@ -38,7 +39,8 @@ export function useRoom(code: string, helloFn: () => ClientMsg | null, onJoined?
       }
     }
     if (enabled) open()
-    const wake = () => { if (document.visibilityState === 'visible' && ws.current?.readyState !== WebSocket.OPEN && !stop && enabled) { clearTimeout(timer); open() } }
+    const wake = () => { const rs = ws.current?.readyState
+      if (document.visibilityState === 'visible' && (rs === undefined || rs >= WebSocket.CLOSING) && !stop && enabled) { clearTimeout(timer); open() } }
     document.addEventListener('visibilitychange', wake)
     window.addEventListener('online', wake)
     return () => { stop = true; clearTimeout(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('online', wake); ws.current?.close() }

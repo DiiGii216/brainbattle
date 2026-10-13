@@ -125,7 +125,7 @@ export class Room extends DurableObject<Env> {
     if (msg.t === 'hello') {
       if (at.role === 'player' && msg.role === 'player' && msg.name !== undefined) { this.err(ws, 'bad_hello', 'Bereits angemeldet'); return bail() }
       await this.hello(ws, msg)
-      return
+      return bail()
     }
     if (!at.role) { this.err(ws, 'no_hello', 'Bitte zuerst anmelden'); return bail() }
 
@@ -172,10 +172,10 @@ export class Room extends DurableObject<Env> {
       ws.serializeAttachment({ role: 'screen' } satisfies Attach)
     } else if (msg.role === 'player') {
       let p: Player | undefined
-      if (typeof msg.token === 'string') {
-        p = Object.values(s.players).find((x) => safeEq(x.token, msg.token!))
-        if (!p) return this.err(ws, 'unknown_token', 'Spieler nicht mehr bekannt – bitte neu beitreten')
-      } else {
+      const tk = typeof msg.token === 'string' ? msg.token : null
+      if (tk) p = Object.values(s.players).find((x) => safeEq(x.token, tk))
+      if (tk && !p && (msg.name === undefined || !/^[0-9a-f]{32}$/.test(tk))) return this.err(ws, 'unknown_token', 'Spieler nicht mehr bekannt – bitte neu beitreten')
+      if (!p) {
         if (s.phase !== 'LOBBY') return this.err(ws, 'closed_join', 'Das Spiel läuft bereits – neue Spieler sind nicht mehr möglich')
         const name = cleanName(msg.name)
         if (!name) return this.err(ws, 'bad_name', 'Bitte einen Namen eingeben')
@@ -184,7 +184,7 @@ export class Room extends DurableObject<Env> {
           return this.err(ws, 'name_taken', 'Dieser Name ist schon vergeben')
         const used = new Set(Object.values(s.players).map((x) => x.avatar))
         const avatar = AVATARS.find((a) => !used.has(a)) ?? AVATARS[s.order.length % AVATARS.length]
-        p = { id: rid(6), token: rid(16), name, avatar, score: 0, fullCount: 0, practiceFull: 0, delta: 0, results: [], word: null }
+        p = { id: rid(6), token: tk ?? rid(16), name, avatar, score: 0, fullCount: 0, practiceFull: 0, delta: 0, results: [], word: null }
         s.players[p.id] = p
         s.order.push(p.id)
       }

@@ -3,13 +3,13 @@ import type { Answer, PublicQuestion } from '../shared/protocol'
 import { LETTERS, OPT_STYLE, PAIR_COLORS } from './ui'
 
 /** Interaktive Antworteingabe auf dem Handy. onSubmit sendet die endgültige Antwort. */
-export default function Inputs({ q, onSubmit }: { q: PublicQuestion; onSubmit: (a: Answer) => void }) {
+export default function Inputs({ q, onSubmit, paused }: { q: PublicQuestion; onSubmit: (a: Answer) => void; paused?: boolean }) {
   const [choice, setChoice] = useState<number | null>(null)
   const [map, setMap] = useState<(number | null)[]>(() => (q.lefts ?? []).map(() => null))
   const [activeLeft, setActiveLeft] = useState<number | null>(0)
   const [seq, setSeq] = useState<number[]>([])
   const [busy, setBusy] = useState(false)
-  const submit = (a: Answer) => { if (busy) return; setBusy(true); onSubmit(a) }
+  const submit = (a: Answer) => { if (busy) return; setBusy(true); onSubmit(a); setTimeout(() => setBusy(false), 2000) }
 
   useEffect(() => {
     if (q.format !== 'mc' && q.format !== 'who') return
@@ -18,7 +18,7 @@ export default function Inputs({ q, onSubmit }: { q: PublicQuestion; onSubmit: (
   }, [q.format])
 
   const SubmitBtn = ({ ok, onClick }: { ok: boolean; onClick: () => void }) => (
-    <button className="btn btn-lime mt-4 w-full !min-h-[60px] text-lg" disabled={!ok || busy} onClick={onClick}>Antwort abgeben 🔒</button>
+    <button className="btn btn-lime mt-4 w-full !min-h-[60px] text-lg" disabled={!ok || busy || paused} onClick={onClick}>Antwort abgeben 🔒</button>
   )
 
   if (q.format === 'tf') {

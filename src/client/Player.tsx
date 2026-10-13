@@ -9,9 +9,10 @@ const tokKey = (c: string) => `bb-token-${c}`
 export default function Player({ code }: { code: string }) {
   const [name, setName] = useState('')
   const [joining, setJoining] = useState<string | null>(null) // Name, sobald Beitritt gestartet
+  const [pending] = useState(() => [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('')) // idempotenter Beitritt
   const [token, setToken] = useState<string | null>(() => { try { return localStorage.getItem(tokKey(code)) } catch { return null } })
   const [word, setWord] = useState('')
-  const room = useRoom(code, () => token ? { t: 'hello', role: 'player', token } : joining ? { t: 'hello', role: 'player', name: joining } : null,
+  const room = useRoom(code, () => token ? { t: 'hello', role: 'player', token } : joining ? { t: 'hello', role: 'player', name: joining, token: pending } : null,
     (tk) => { try { localStorage.setItem(tokKey(code), tk) } catch { /* privat */ } setToken(tk) })
   const { snap, err, offset, send, status } = room
 
@@ -109,7 +110,7 @@ function Body({ snap, send, word, setWord, err }: { snap: Snapshot; send: (m: im
         <div className="flex items-center justify-between"><FormatBadge q={q} /><span className="text-xs font-bold text-steel">bis {q.points} Punkte</span></div>
         <h1 className={`font-extrabold leading-snug ${q.format === 'who' ? 'text-xl italic' : 'text-xl'}`}>{q.prompt}</h1>
         {err && <p role="alert" className="font-bold text-coral">{err}</p>}
-        <Inputs q={q} onSubmit={(a) => send({ t: 'answer', q: q.id, a })} />
+        <Inputs q={q} paused={snap.paused} onSubmit={(a) => send({ t: 'answer', q: q.id, a })} />
       </div>
     )
   }

@@ -11,10 +11,11 @@ describe('Fragenkatalog', () => {
     QUESTIONS.forEach((x) => (c[x.format] = (c[x.format] ?? 0) + 1))
     expect(c).toEqual({ mc: 8, tf: 4, match: 5, order: 1, who: 2 })
   })
-  it('Gesamtpunkte = 2500, Zeitbudget ≈ 11:23', () => {
+  it('Gesamtpunkte = 2500, Zeitbudget ≈ 11 Minuten', () => {
     expect(QUESTIONS.reduce((a, x) => a + pointsOf(x), 0)).toBe(2500)
-    const secs = QUESTIONS.reduce((a, x) => a + x.seconds + 7, 0) + 19 * 3 + 40 + 30
-    expect(secs).toBe(11 * 60 + 23)
+    // Fragen + 7 s Auflösung + 20 × 3 s Übergang (inkl. Countdown vor Frage 1) + 2 × 20 s Zwischenranking
+    const secs = QUESTIONS.reduce((a, x) => a + x.seconds + 7, 0) + 20 * 3 + 40
+    expect(secs).toBe(656) // 10:56; plus ca. 30 s Finale-Animation ≈ 11:26 (Brief: 11:23 + Puffer)
   })
   it('Erklärungen ≤ 25 Wörter, eindeutige IDs, MC mit 4 verschiedenen Optionen', () => {
     expect(new Set(QUESTIONS.map((x) => x.id)).size).toBe(20)
