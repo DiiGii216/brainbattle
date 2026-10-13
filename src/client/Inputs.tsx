@@ -1,126 +1,85 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Check, CircleCheck, CircleX } from 'lucide-react'
 import type { Answer, PublicQuestion } from '../shared/protocol'
-import { LETTERS, OPT_STYLE, PAIR_COLORS } from './ui'
+import { Match, Order, type InputProps } from './DragInputs'
+import { LETTERS } from './ui'
 
-/** Interaktive Antworteingabe auf dem Handy. onSubmit sendet die endgültige Antwort. */
-export default function Inputs({ q, onSubmit, paused }: { q: PublicQuestion; onSubmit: (a: Answer) => void; paused?: boolean }) {
-  const [choice, setChoice] = useState<number | null>(null)
-  const [map, setMap] = useState<(number | null)[]>(() => (q.lefts ?? []).map(() => null))
-  const [activeLeft, setActiveLeft] = useState<number | null>(0)
-  const [seq, setSeq] = useState<number[]>([])
-  const [busy, setBusy] = useState(false)
-  const submit = (a: Answer) => { if (busy) return; setBusy(true); onSubmit(a); setTimeout(() => setBusy(false), 2000) }
+const CONFIRM_TIMEOUT = 5000
 
-  useEffect(() => {
-    if (q.format !== 'mc' && q.format !== 'who') return
-    const h = (e: KeyboardEvent) => { const i = 'abcd'.indexOf(e.key.toLowerCase()); const n = '1234'.indexOf(e.key); const k = i >= 0 ? i : n; if (k >= 0 && k < 4) setChoice(k) }
-    window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h)
-  }, [q.format])
+/**
+ * Interaktive Antworteingabe auf dem Handy. `onSubmit` sendet die endgültige Antwort und liefert zurück, ob die Nachricht
+ * tatsächlich auf die Leitung ging. Endgültig "abgegeben" ist die Antwort erst, wenn der Server-Snapshot `you.answered`
+ * meldet – dann ersetzt Player diese Komponente durch die Sperransicht. Bis dahin zeigt sie nur "wird gesendet".
+ */
+export default function Inputs({ q, onSubmit, paused, serverErr }: { q: PublicQuestion; onSubmit: (a: Answer) => boolean; paused?: boolean; serverErr?: string }) {
+  const [sending, setSending] = useState(false)
+  const [note, setNote] = useState('')
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => () => clearTimeout(timer.current), [])
+  useEffect(() => { if (serverErr) { clearTimeout(timer.current); setSending(false) } }, [serverErr])
 
-  const SubmitBtn = ({ ok, onClick }: { ok: boolean; onClick: () => void }) => (
-    <button className="btn btn-lime mt-4 w-full !min-h-[60px] text-lg" disabled={!ok || busy || paused} onClick={onClick}>Antwort abgeben 🔒</button>
+  const submit = (a: Answer) => {
+    if (sending || paused) return
+    if (!onSubmit(a)) { setNote('Keine Verbindung – die Antwort wurde nicht gesendet. Sobald die Verbindung steht, erneut abgeben.'); return }
+    setNote(''); setSending(true)
+    timer.current = setTimeout(() => { setSending(false); setNote('Noch keine Bestätigung vom Server. Prüfe die Verbindung und gib die Antwort erneut ab.') }, CONFIRM_TIMEOUT)
+  }
+  // Pause sperrt nur das Absenden (Server lehnt Antworten ab); Anordnen bleibt möglich.
+  const locked = sending
+  const renderSubmit = ({ ready, hint, onClick }: { ready: boolean; hint: string; onClick: () => void }) => (
+    <SubmitBar ready={ready} hint={hint} sending={sending} paused={!!paused} note={note} onClick={onClick} />
   )
 
-  if (q.format === 'tf') {
-    return (
-      <div className="flex flex-1 flex-col">
-        <div className="grid flex-1 grid-rows-2 gap-3">
-          {q.options!.map((o, i) => (
-            <button key={i} aria-pressed={choice === i} onClick={() => setChoice(i)}
-              className={`display grid place-items-center rounded-3xl text-4xl text-navy transition-all ${i === 0 ? 'bg-lime' : 'bg-coral'} ${choice === i ? 'scale-[1.02] ring-8 ring-snow' : choice !== null ? 'opacity-40' : ''}`}>
-              <span><span className="block text-5xl" aria-hidden>{i === 0 ? '✅' : '🚫'}</span>{o}</span>
-            </button>
-          ))}
-        </div>
-        <SubmitBtn ok={choice !== null} onClick={() => submit(choice!)} />
-      </div>
-    )
-  }
+  if (q.format === 'match') return <Match q={q} locked={locked} submit={submit} renderSubmit={renderSubmit} />
+  if (q.format === 'order') return <Order q={q} locked={locked} submit={submit} renderSubmit={renderSubmit} />
+  return <Choice q={q} locked={locked} submit={submit} renderSubmit={renderSubmit} />
+}
 
-  if (q.format === 'mc' || q.format === 'who') {
-    const who = q.format === 'who'
-    return (
-      <div className="flex flex-1 flex-col">
-        <div className={`grid flex-1 gap-3 ${who ? 'grid-cols-1' : 'grid-cols-1 min-[480px]:grid-cols-2'}`} role="radiogroup">
-          {q.options!.map((o, i) => {
-            const st = OPT_STYLE[i]
-            return (
-              <button key={i} role="radio" aria-checked={choice === i} onClick={() => setChoice(i)}
-                className={`flex min-h-[64px] items-center gap-3 rounded-2xl p-3 text-left text-base font-bold leading-snug transition-all ${who ? 'bg-navy3 text-snow' : `${st.bg} ${st.fg}`} ${choice === i ? 'scale-[1.02] ring-4 ring-snow' : choice !== null ? 'opacity-50' : ''}`}>
-                <span className={`display grid h-10 w-10 shrink-0 place-items-center rounded-xl ${who ? `${st.bg} ${st.fg}` : 'bg-navy text-snow'}`}>{LETTERS[i]}</span>
-                <span>{o}</span>
-              </button>
-            )
-          })}
-        </div>
-        <SubmitBtn ok={choice !== null} onClick={() => submit(choice!)} />
-      </div>
-    )
-  }
-
-  if (q.format === 'match') {
-    const used = new Map<number, number>() // rightIdx → leftIdx
-    map.forEach((r, l) => r !== null && used.set(r, l))
-    const pickRight = (k: number) => {
-      if (activeLeft === null) return
-      const next = [...map]
-      const other = used.get(k)
-      if (other !== undefined) next[other] = null
-      next[activeLeft] = k
-      setMap(next)
-      const free = next.findIndex((v, i) => v === null && i !== activeLeft)
-      setActiveLeft(free >= 0 ? free : null)
-    }
-    return (
-      <div className="flex flex-1 flex-col gap-3">
-        <p className="text-sm font-semibold text-steel">1. Begriff antippen · 2. passende Antwort antippen</p>
-        <div className="flex flex-col gap-2">
-          {q.lefts!.map((l, i) => (
-            <button key={i} aria-pressed={activeLeft === i} onClick={() => setActiveLeft(i)}
-              className={`rounded-2xl bg-navy3 p-3 text-left font-bold transition-all ${activeLeft === i ? 'ring-4 ring-snow' : ''}`} style={{ borderLeft: `10px solid ${PAIR_COLORS[i]}` }}>
-              {l}
-              <span className="mt-1 block text-sm font-semibold text-steel">{map[i] !== null ? `→ ${q.rights![map[i]!]}` : 'noch nicht zugeordnet'}</span>
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-col gap-2">
-          {q.rights!.map((r, k) => {
-            const owner = used.get(k)
-            return (
-              <button key={k} onClick={() => pickRight(k)} disabled={activeLeft === null && owner === undefined}
-                className="flex min-h-[56px] items-center gap-3 rounded-2xl border-2 border-dashed border-sky/60 bg-navy2 p-3 text-left font-semibold" style={owner !== undefined ? { borderStyle: 'solid', borderColor: PAIR_COLORS[owner] } : {}}>
-                {owner !== undefined && <span className="display grid h-8 w-8 shrink-0 place-items-center rounded-lg text-navy" style={{ background: PAIR_COLORS[owner] }}>{owner + 1}</span>}{r}
-              </button>
-            )
-          })}
-        </div>
-        <div className="mt-auto"><SubmitBtn ok={map.every((v) => v !== null)} onClick={() => submit(map as number[])} /></div>
-      </div>
-    )
-  }
-
-  // order
-  const n = q.items!.length
+function SubmitBar({ ready, hint, sending, paused, note, onClick }: { ready: boolean; hint: string; sending: boolean; paused: boolean; note: string; onClick: () => void }) {
   return (
-    <div className="flex flex-1 flex-col gap-3">
-      <p className="text-sm font-semibold text-steel">Tippe die Elemente in der richtigen Reihenfolge an. Platziertes erneut antippen = zurück.</p>
-      <ol className="flex flex-col gap-2">
-        {Array.from({ length: n }, (_, pos) => (
-          <li key={pos}>
-            <button disabled={seq[pos] === undefined} onClick={() => setSeq(seq.slice(0, pos))}
-              className={`flex min-h-[52px] w-full items-center gap-3 rounded-2xl p-3 text-left font-bold ${seq[pos] !== undefined ? 'a-pop bg-lime text-navy' : 'border-2 border-dashed border-steel/40 text-steel'}`}>
-              <span className="display grid h-8 w-8 place-items-center rounded-lg bg-navy text-snow">{pos + 1}</span>
-              {seq[pos] !== undefined ? q.items![seq[pos]] : 'frei'}
-            </button>
-          </li>
-        ))}
-      </ol>
-      <div className="flex flex-wrap gap-2">
-        {q.items!.map((it, d) => !seq.includes(d) && (
-          <button key={d} onClick={() => setSeq([...seq, d])} className="btn bg-navy3 !min-h-[52px] text-left">{it}</button>
+    <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-line bg-bg px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-4">
+      <p className="mb-2 text-center text-sm font-semibold text-mute" role="status">{sending ? 'Antwort wird an den Server gesendet …' : paused ? 'Pause – Eingabe gesperrt.' : hint}</p>
+      {note && <p role="alert" className="mb-2 text-center text-sm font-bold text-bad">{note}</p>}
+      <button type="button" className="btn btn-gold w-full !min-h-[60px] text-lg" disabled={!ready || sending || paused} aria-busy={sending} onClick={onClick}>
+        {sending ? 'Wird gesendet …' : 'Antwort abgeben'}
+      </button>
+    </div>
+  )
+}
+
+/** Quiz-Klassiker, Wer bin ich? (4 Optionen) und Fakt/Fake (2 Optionen): ein Index als Antwort. */
+function Choice({ q, locked, submit, renderSubmit }: { q: PublicQuestion; locked: boolean; submit: (a: Answer) => void; renderSubmit: InputProps['renderSubmit'] }) {
+  const [choice, setChoice] = useState<number | null>(null)
+  const tf = q.format === 'tf'
+
+  useEffect(() => {
+    if (tf) return
+    const h = (e: KeyboardEvent) => {
+      if (locked || (e.target as HTMLElement | null)?.closest('input,textarea')) return
+      const i = 'abcd'.indexOf(e.key.toLowerCase()), n = '1234'.indexOf(e.key), k = i >= 0 ? i : n
+      if (k >= 0 && k < 4) setChoice(k)
+    }
+    window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h)
+  }, [tf, locked])
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <div role="radiogroup" aria-label="Antwortmöglichkeiten" className={`grid flex-1 gap-3 ${tf ? 'grid-rows-2' : 'auto-rows-min'}`}>
+        {q.options!.map((o, i) => (
+          <button key={i} type="button" role="radio" aria-checked={choice === i} disabled={locked} onClick={() => setChoice(i)}
+            className={`choice flex items-center gap-3 p-3 text-left ${tf ? 'min-h-[120px] flex-col justify-center text-center' : 'min-h-[68px]'}`}>
+            {tf
+              ? <>{i === 0 ? <CircleCheck size={56} strokeWidth={1.75} aria-hidden /> : <CircleX size={56} strokeWidth={1.75} aria-hidden />}
+                  <span className="display text-3xl">{i === 0 ? 'Fakt' : 'Fake'}</span></>
+              : <>
+                  <span className="badge-num h-10 w-10 shrink-0 rounded-xl text-lg !bg-deep !text-gold-light" aria-hidden>{LETTERS[i]}</span>
+                  <span className="min-w-0 flex-1 text-lg font-bold leading-snug [overflow-wrap:anywhere]">{o}</span>
+                  {choice === i && <Check key="c" className="a-pop shrink-0 text-gold" size={26} aria-hidden />}
+                </>}
+          </button>
         ))}
       </div>
-      <div className="mt-auto"><SubmitBtn ok={seq.length === n} onClick={() => submit(seq)} /></div>
+      {renderSubmit({ ready: choice !== null, hint: choice === null ? 'Wähle eine Antwort.' : 'Du kannst die Auswahl noch ändern.', onClick: () => choice !== null && submit(choice) })}
     </div>
   )
 }

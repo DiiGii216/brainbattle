@@ -46,7 +46,8 @@ export function useRoom(code: string, helloFn: () => ClientMsg | null, onJoined?
     return () => { stop = true; clearTimeout(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('online', wake); ws.current?.close() }
   }, [code, enabled, nonce])
 
-  const send = useCallback((m: ClientMsg) => { if (ws.current?.readyState === WebSocket.OPEN) ws.current.send(JSON.stringify(m)) }, [])
+  /** Liefert false, wenn die Nachricht wegen fehlender Verbindung nicht gesendet wurde. */
+  const send = useCallback((m: ClientMsg) => { if (ws.current?.readyState !== WebSocket.OPEN) return false; ws.current.send(JSON.stringify(m)); return true }, [])
   const reconnect = useCallback(() => { setErr(null); setNonce((n) => n + 1) }, [])
   return { snap, status, err, offset, send, reconnect, setEnabled, clearErr: () => setErr(null) }
 }

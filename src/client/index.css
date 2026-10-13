@@ -1,53 +1,91 @@
 @import 'tailwindcss';
 
+/* Broadcast Gold – einzige Quelle der Farben. Gold = Akzent/Auswahl, Violett = Studioatmosphäre, Navy = Hintergrund. */
 @theme {
-  --color-navy: #101522;
-  --color-navy2: #1a2236;
-  --color-navy3: #26324b;
-  --color-lime: #d7fd68;
-  --color-coral: #ff756b;
-  --color-snow: #f7f8fa;
-  --color-steel: #aab5c8;
-  --color-violet: #a799ff;
-  --color-sky: #6ccbff;
-  --color-amber: #ffc857;
+  --color-bg: #090d25;
+  --color-panel: #111833;
+  --color-surface: #192141;
+  --color-deep: #0c122d;
+  --color-ink: #f7f8fd;
+  --color-mute: #aab3cd;
+  --color-gold: #f5be66;
+  --color-gold-light: #ffd88e;
+  --color-violet: #8058d1; /* nur dekorativ (Flächen, Glows) */
+  --color-violet-soft: #d5bdff; /* lesbares Violett (Text) */
+  --color-ok: #43c991;
+  --color-bad: #f07178;
+  --color-line: #303a61; /* dekorative Rahmen */
+  --color-line-strong: #657394; /* interaktive Rahmen (≥ 3:1) */
   --font-display: 'Arial Black', 'Segoe UI Black', 'Helvetica Neue', system-ui, sans-serif;
 }
 
-html, body, #root { height: 100%; }
+html, body, #root { min-height: 100%; }
+html { scroll-padding-top: 5rem; scroll-padding-bottom: 7rem; }
 body {
-  margin: 0; background: var(--color-navy); color: var(--color-snow);
+  margin: 0; background: var(--color-bg); color: var(--color-ink);
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  -webkit-tap-highlight-color: transparent; overscroll-behavior: none;
-  background-image: radial-gradient(1200px 600px at 80% -10%, rgba(215,253,104,.10), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgba(255,117,107,.10), transparent 60%);
+  -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none;
+  background-image: radial-gradient(900px 480px at 85% -10%, rgba(128,88,209,.28), transparent 60%),
+    radial-gradient(700px 420px at -10% 110%, rgba(245,190,102,.10), transparent 60%);
   background-attachment: fixed;
 }
 button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
 button:disabled { cursor: not-allowed; }
-:focus-visible { outline: 3px solid var(--color-lime); outline-offset: 3px; border-radius: 12px; }
+:focus-visible { outline: 3px solid var(--color-gold-light); outline-offset: 3px; border-radius: 12px; }
+@layer components {
 .display { font-weight: 900; font-family: var(--font-display); letter-spacing: -0.02em; text-transform: uppercase; }
-.card { background: var(--color-navy2); border: 1px solid rgba(170,181,200,.18); border-radius: 1.25rem; }
+.card { background: var(--color-panel); border: 1px solid var(--color-line); border-radius: 1.25rem; }
+.field { background: var(--color-deep); border: 2px solid var(--color-line-strong); outline: none; }
+.field:focus { border-color: var(--color-gold); box-shadow: 0 0 0 3px rgba(245,190,102,.35); }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 48px; padding: .6rem 1.1rem;
-  border-radius: 1rem; font-weight: 800; border: 2px solid transparent; transition: transform .12s, background .2s, opacity .2s; }
+  border-radius: 1rem; font-weight: 800; border: 2px solid transparent; transition: transform .12s, background .2s, opacity .2s, box-shadow .2s; }
 .btn:active:not(:disabled) { transform: scale(.97); }
-.btn:disabled { opacity: .4; }
-.btn-lime { background: var(--color-lime); color: var(--color-navy); }
-.btn-coral { background: var(--color-coral); color: var(--color-navy); }
-.btn-ghost { background: transparent; border-color: rgba(170,181,200,.4); color: var(--color-snow); }
+.btn:disabled { opacity: .45; }
+.btn-gold { background: var(--color-gold); color: var(--color-bg); box-shadow: 0 0 18px rgba(245,190,102,.25); }
+.btn-gold:hover:not(:disabled) { background: var(--color-gold-light); }
+.btn-bad { background: var(--color-bad); color: var(--color-bg); }
+.btn-ghost { background: transparent; border-color: var(--color-line-strong); color: var(--color-ink); }
+
+/* Auswahlkarten (Quiz, Fakt/Fake, Matchmaker, Ordering): Gold markiert Auswahl, nie fachliche Richtigkeit. */
+.choice { background: var(--color-surface); border: 2px solid var(--color-line-strong); border-radius: 1rem; transition: transform .12s, border-color .15s, background .15s, box-shadow .2s; }
+.choice:active:not(:disabled) { transform: scale(.985); }
+.choice[aria-checked='true'], .choice[aria-pressed='true'], .choice.is-selected { border-color: var(--color-gold); background: rgba(245,190,102,.14); box-shadow: 0 0 0 2px var(--color-gold), 0 0 22px rgba(245,190,102,.28); }
+.dropzone { border: 2px dashed var(--color-line-strong); background: var(--color-deep); border-radius: 1rem; min-height: 64px; transition: border-color .15s, background .15s, box-shadow .15s, transform .15s; }
+.dnd-active .dropzone { border-color: var(--color-gold); background: rgba(245,190,102,.07); }
+.dropzone.is-over { border-style: solid; border-color: var(--color-gold-light); background: rgba(245,190,102,.2); box-shadow: 0 0 22px rgba(245,190,102,.35); transform: scale(1.015); }
+.dropzone.is-filled { border-style: solid; border-color: var(--color-gold); background: var(--color-surface); }
+.draggable { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.draggable[data-dnd-dragging], .draggable.is-dragging { box-shadow: 0 10px 26px rgba(0,0,0,.5), 0 0 22px rgba(245,190,102,.45); border-color: var(--color-gold-light); transform: scale(1.03); }
+.grip { touch-action: none; cursor: grab; }
+.no-scrollbar-x { overflow-x: hidden; }
+.badge-num { display: grid; place-items: center; font-family: var(--font-display); font-weight: 900; background: var(--color-gold); color: var(--color-bg); }
+.glow-gold { box-shadow: 0 0 0 2px var(--color-gold), 0 0 34px rgba(245,190,102,.4); }
+.mystery { background: linear-gradient(135deg, rgba(128,88,209,.32), var(--color-panel) 60%); border: 1px solid var(--color-violet); box-shadow: 0 0 26px rgba(128,88,209,.35); }
+
+/* Präsentationsansicht: begrenzte, komponentenbezogene Größen (kein globales Skalieren der Oberfläche).
+   Referenz 1280×720: Frage ≈ 37 px, Antwort ≈ 24 px, Zusatzinfo ≥ 16 px. */
+.s-question { font-size: clamp(1.5rem, min(3.1vw, 5.2vh), 2.75rem); line-height: 1.2; }
+.s-answer { font-size: clamp(1.125rem, min(1.9vw, 3.3vh), 1.75rem); line-height: 1.25; }
+.s-info { font-size: clamp(1rem, min(1.3vw, 2.4vh), 1.375rem); }
+.s-title { font-size: clamp(1.5rem, min(3.4vw, 6vh), 3.5rem); line-height: 1.1; }
+.s-pad { padding: clamp(.75rem, min(2vw, 3.6vh), 2.5rem); }
+.s-gap { gap: clamp(.5rem, min(1.2vw, 2.2vh), 1.5rem); }
+}
 
 @keyframes pop { 0% { transform: scale(.6); opacity: 0 } 70% { transform: scale(1.06); opacity: 1 } 100% { transform: scale(1) } }
 @keyframes slideUp { from { transform: translateY(24px); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes shake { 0%,100% { transform: none } 25% { transform: translateX(-6px) } 75% { transform: translateX(6px) } }
 @keyframes floaty { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
-@keyframes glow { 0%,100% { box-shadow: 0 0 0 0 rgba(215,253,104,.45) } 50% { box-shadow: 0 0 0 14px rgba(215,253,104,0) } }
+@keyframes snap { 0% { transform: scale(.94) } 60% { transform: scale(1.04) } 100% { transform: scale(1) } }
+@keyframes climb { 0%,100% { box-shadow: 0 0 0 0 rgba(245,190,102,0) } 30%,70% { box-shadow: 0 0 0 3px var(--color-gold), 0 0 26px rgba(245,190,102,.55) } }
 @keyframes grow { from { transform: scaleY(0) } to { transform: scaleY(1) } }
 @keyframes confetti { 0% { transform: translate3d(0,-10vh,0) rotate(0); opacity: 1 } 100% { transform: translate3d(var(--dx),110vh,0) rotate(720deg); opacity: .9 } }
 .a-pop { animation: pop .45s cubic-bezier(.2,.9,.3,1.2) both; }
 .a-up { animation: slideUp .4s ease-out both; }
 .a-shake { animation: shake .4s; }
 .a-float { animation: floaty 3s ease-in-out infinite; }
-.a-glow { animation: glow 1.8s infinite; }
+.a-snap { animation: snap .3s ease-out; }
+.a-climb { animation: climb 2.4s ease-in-out; }
 .a-grow { transform-origin: bottom; animation: grow .9s cubic-bezier(.2,.8,.2,1) both; }
 .confetti { position: fixed; top: 0; width: 10px; height: 16px; z-index: 50; pointer-events: none; animation: confetti linear forwards; }
 @media (prefers-reduced-motion: reduce) {
