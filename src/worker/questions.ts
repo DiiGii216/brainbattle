@@ -15,7 +15,8 @@ interface Base {
   seconds: number
   prompt: string
   explanation: string // max. 25 Wörter
-  source?: 'folien-entwurf' | 'extern'
+  /** folien = Begriff/Aussage auf Folie 3–24 geprüft; extern = Ergänzung/Beispiel außerhalb der Folien */
+  source?: 'folien' | 'extern'
 }
 export type Question = Base &
   (
@@ -36,7 +37,7 @@ export const QUESTIONS: Question[] = [
       { left: 'Ablauforganisation', right: 'Arbeitsabläufe und Prozessreihenfolge' },
     ],
     rightOrder: [1, 0],
-    explanation: 'Aufbau regelt, wer wofür zuständig ist. Ablauf regelt, in welcher Reihenfolge Arbeit geschieht.' },
+    explanation: 'Aufbau (Statik) regelt Zuständigkeiten und Hierarchien. Ablauf (Dynamik) regelt, in welcher Reihenfolge Arbeit geschieht.' },
   { id: 2, topic: 'Gegenstromverfahren', ...K(), difficulty: 2, format: 'mc',
     prompt: 'Was charakterisiert das Gegenstromverfahren?',
     options: [
@@ -71,8 +72,8 @@ export const QUESTIONS: Question[] = [
       'Insbesondere Staat und Kapitalsammelstellen',
       'Ausschließlich Lieferanten und Kunden eines Betriebs',
     ], correct: 2,
-    source: 'folien-entwurf',
-    explanation: 'Das einfache Modell kennt Haushalte und Unternehmen. Erweitert kommen Staat und Kapitalsammelstellen (z. B. Banken) hinzu.' },
+    source: 'folien',
+    explanation: 'Einfach: Haushalte und Unternehmen. Erweitert kommen Staat und Kapitalsammelstellen (jede Form der Vermögensbildung) hinzu.' },
   { id: 7, topic: 'Bruttoinlandsprodukt', ...K(), difficulty: 2, format: 'mc',
     prompt: 'Was misst das Bruttoinlandsprodukt (BIP)?',
     options: [
@@ -84,13 +85,13 @@ export const QUESTIONS: Question[] = [
     explanation: 'Das BIP zählt nur Endprodukte, die im Inland in einem Zeitraum entstehen. Vorleistungen werden nicht doppelt gezählt.' },
   { id: 8, topic: 'Konjunkturzyklus', ...K(), difficulty: 2, format: 'order',
     prompt: 'Bringe die Konjunkturphasen in die richtige Reihenfolge – beginne beim Aufschwung.',
-    items: ['Aufschwung', 'Boom', 'Abschwung', 'Tiefphase'], display: [2, 0, 3, 1],
-    explanation: 'Der Zyklus läuft: Aufschwung, Boom (Höhepunkt), Abschwung, Tiefphase – und beginnt danach wieder von vorn.' },
+    items: ['Aufschwung (Expansion)', 'Boom (Hochkonjunktur)', 'Abschwung (Rezession)', 'Tiefstand (Depression)'], display: [2, 0, 3, 1],
+    explanation: 'Konjunkturphasen: Aufschwung, Boom, Abschwung (Rezession), Tiefstand (Depression) – danach beginnt der Zyklus von vorn.' },
   { id: 9, topic: 'Industrie 4.0', ...K(), difficulty: 1, format: 'tf',
     prompt: 'Industrie 4.0 dreht sich ausschließlich um neue Maschinen. Digitale Vernetzung spielt keine Rolle.',
     correct: false,
-    explanation: 'Im Kern steht die digitale Vernetzung von Maschinen, Daten und Prozessen – nicht nur neue Hardware.' },
-  { id: 10, topic: 'Friktionelle Arbeitslosigkeit', ...K(), difficulty: 1, format: 'who',
+    explanation: 'Zentral sind digitale Transformation und vernetzte, voneinander lernende Maschinen – nicht nur neue Hardware.' },
+  { id: 10, topic: 'Friktionelle Arbeitslosigkeit', ...K(), difficulty: 1, source: 'extern', format: 'who',
     prompt: 'Ich entstehe oft zwischen zwei Jobs und bin meistens nur von kurzer Dauer. Wer bin ich?',
     options: ['Friktionelle Arbeitslosigkeit', 'Strukturelle Arbeitslosigkeit', 'Saisonale Arbeitslosigkeit', 'Konjunkturelle Arbeitslosigkeit'],
     correct: 0,
@@ -140,17 +141,17 @@ export const QUESTIONS: Question[] = [
       { left: 'Private Haushalte legen Geld bei einer Bank an', right: 'Kapitalsammelstelle' },
     ],
     rightOrder: [2, 0, 1],
-    explanation: 'Steuern gehen an den Staat, Sozialleistungen an Haushalte, Spareinlagen an Kapitalsammelstellen wie Banken.' },
+    explanation: 'Steuern gehen an den Staat, Transfers an Haushalte, Spareinlagen an Kapitalsammelstellen (Vermögensbildung, z. B. Bank).' },
   { id: 17, topic: 'Bruttoinlandsprodukt', ...P(), difficulty: 3, format: 'tf',
     prompt: 'Ein Unternehmen mit französischem Firmensitz produziert Waren in Deutschland. Diese Produktion zählt grundsätzlich ausschließlich zum französischen BIP.',
     correct: false,
     explanation: 'Das BIP folgt dem Inlandskonzept: Entscheidend ist grundsätzlich der Produktionsort, hier Deutschland – nicht der Firmensitz.' },
   { id: 18, topic: 'Konjunkturzyklus', ...P(), difficulty: 2, format: 'mc',
     prompt: 'Nach dem Höhepunkt gehen die Aufträge zurück, Unternehmen reduzieren Investitionen und planen vorsichtiger mit Personal. Welche Phase ist das?',
-    options: ['Aufschwung', 'Boom', 'Abschwung', 'Tiefphase'],
+    options: ['Aufschwung (Expansion)', 'Boom (Hochkonjunktur)', 'Abschwung (Rezession)', 'Tiefstand (Depression)'],
     correct: 2,
     explanation: 'Sinkende Aufträge und zurückhaltende Investitionen nach dem Höhepunkt kennzeichnen den Abschwung.' },
-  { id: 19, topic: 'Industrie 4.0', ...P(), difficulty: 2, format: 'mc',
+  { id: 19, topic: 'Industrie 4.0', ...P(), difficulty: 2, source: 'extern', format: 'mc',
     prompt: 'Vernetzte Maschinensensoren erkennen einen drohenden Defekt, bevor die Maschine ausfällt. Was beschreibt das?',
     options: [
       'Vernetzte Datenanalyse und vorausschauende Wartung im Sinne von Industrie 4.0',
@@ -159,7 +160,7 @@ export const QUESTIONS: Question[] = [
       'Manuelle Sichtkontrolle durch die Schichtleitung',
     ], correct: 0,
     explanation: 'Sensordaten werden vernetzt ausgewertet, um Wartung vorausschauend zu planen (Predictive Maintenance).' },
-  { id: 20, topic: 'Friktionelle Arbeitslosigkeit', ...P(), difficulty: 2, format: 'mc',
+  { id: 20, topic: 'Friktionelle Arbeitslosigkeit', ...P(), difficulty: 2, source: 'extern', format: 'mc',
     prompt: 'Eine Beschäftigte beendet ihre bisherige Tätigkeit und sucht einige Wochen nach einer passenden neuen Stelle. Welche Form der Arbeitslosigkeit liegt vor?',
     options: ['Strukturelle Arbeitslosigkeit', 'Konjunkturelle Arbeitslosigkeit', 'Saisonale Arbeitslosigkeit', 'Friktionelle Arbeitslosigkeit'],
     correct: 3,
