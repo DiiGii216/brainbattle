@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "brainbattle",
+  "build": { "command": "npm run build" },
   "main": "src/worker/index.ts",
   "compatibility_date": "2026-06-01",
   "assets": {

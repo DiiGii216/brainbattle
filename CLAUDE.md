@@ -9,7 +9,7 @@ Live-Multiplayer-Quizshow (20 Fragen, ~11:23 min). Cloudflare Worker + Durable O
 - Simulation (12+ Clients, kompletter 20-Fragen-Durchlauf, Pause/Reconnect/Manipulation):
   `npx wrangler dev --port 8788 --var TIME_SCALE:0.05` und dann `BASE=http://localhost:8788 npm run sim`
 - Browser-E2E (Chromium, 375 px + 1920×1080): `wrangler dev` (TIME_SCALE=1), `CHROMIUM=/opt/pw-browsers/chromium-*/chrome… npm run e2e`
-- Deployment: `npx wrangler login` (Browser) → `npm run deploy`
+- Deployment: automatisch per Cloudflare Workers Builds nach Merge in `main` (Einstellungen: DEPLOY.md)
 
 ## Architektur
 - `src/worker/index.ts`: `POST /api/rooms` (Code + Host-Token), `GET /api/rooms/:code/ws|info` → Durable Object `Room` (`idFromName(code)`). Alles andere liefert Static Assets (SPA-Fallback, `run_worker_first: /api/*`).
@@ -25,12 +25,13 @@ Basis: KNOW IT 100, PROVE IT 150 (max. 2.500). MC/Fakt/Rätsel: alles oder nicht
 
 ## Fragen bearbeiten
 `src/worker/questions.ts` editieren (Erklärung ≤ 25 Wörter, Test `npm test` prüft Struktur, 2500 Punkte und Zeitbudget).
-**Offen:** Quellenabgleich mit Folien 3–24 von „Personalplanung-Teil-1-1.pdf" – die PDF lag nicht im Projekt, die Fragen sind der redaktionelle Entwurf aus dem Briefing (Frage 6, 18 minimal präzisiert).
+**Quellenabgleich:** Folien 3–24 der PDF wurden gelesen und abgeglichen (Konjunkturphasen Folie 16, Kapitalsammelstelle Folie 12–13, BIP Folie 14–15, Industrie 4.0 Folie 19, Aufbau=Statik/Ablauf=Dynamik Folie 3). Als `extern` markiert (nur Namen auf Folie 24, Definitionen/Beispiele ergänzt): Fragen 10, 19, 20.
 
 ## Fortschritt
 - [x] Schritt 1: Projekt, Durable Object, Räume, WebSockets, Lobby-Sync
 - [x] Schritt 2: Quizmotor, Timer/Alarm, Punkte, Ranking
 - [x] Schritt 3: 5 Formate, 20 Fragen, Pause, Zwischenrankings, Finale, Simulation
 - [x] Schritt 4: Design, Präsentationsansicht, QR, Reconnect, Wortwolke, Tests
-- [ ] Cloudflare-Deployment (benötigt `wrangler login` des Nutzers) + Live-Test außerhalb des LAN
-- [ ] Quellenabgleich mit der Original-PDF
+- [x] Quellenabgleich mit der Original-PDF (Folien 3–24)
+- [x] Workers-Builds-Konfiguration vorbereitet (siehe DEPLOY.md)
+- [ ] Cloudflare-Dashboard: GitHub verbinden, erster Deploy, Live-Test außerhalb des LAN (noch NICHT ausgeführt)
