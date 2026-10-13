@@ -97,6 +97,6 @@ export const FORMAT_INFO: Record<Format, { name: string; hint: string; emoji: st
   mc: { name: 'QUIZ-KLASSIKER', hint: 'Eine Antwort ist richtig', emoji: '🎯' },
   tf: { name: 'FAKT ODER FAKE?', hint: 'Stimmt die Aussage?', emoji: '🕵️' },
   match: { name: 'MATCHMAKER', hint: 'Passende Paare bilden', emoji: '🧩' },
-  order: { name: "BRING'S IN ORDNUNG!", hint: 'In die richtige Reihenfolge tippen', emoji: '🔢' },
+  order: { name: "BRING'S IN ORDNUNG!", hint: 'Antippen oder ziehen: in die richtige Reihenfolge', emoji: '🔢' },
   who: { name: 'WER BIN ICH?', hint: 'Errate den Fachbegriff', emoji: '🎭' },
 }

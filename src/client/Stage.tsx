@@ -1,52 +1,57 @@
+import { Check, CircleCheck, CircleX } from 'lucide-react'
 import type { PublicQuestion, Reveal } from '../shared/protocol'
-import { LETTERS, OPT_STYLE, PAIR_COLORS } from './ui'
+import { LETTERS, PAIR_COLORS } from './ui'
 
-/** Große, nicht interaktive Fragendarstellung für die Präsentationsansicht. Lösung nur bei übergebenem `reveal`. */
+/**
+ * Nicht interaktive Fragendarstellung für die Präsentationsansicht. Lösung nur bei übergebenem `reveal`.
+ * Größen kommen aus den begrenzten Klassen .s-question/.s-answer (index.css) – keine Skalierung der gesamten Oberfläche.
+ * Vor der Auflösung sehen alle Antworten gleich aus (keine Farbe verrät die Lösung).
+ */
 export default function Stage({ q, reveal }: { q: PublicQuestion; reveal: Reveal | null }) {
   const sol = reveal?.solution
   const counts = reveal?.stats.kind === 'options' ? reveal.stats.counts : null
   const total = counts ? counts.reduce((a, b) => a + b, 0) || 1 : 1
+  const who = q.format === 'who'
 
   const prompt = (
-    <h2 className={`font-extrabold leading-tight ${q.format === 'who' ? 'display text-[2.3rem] normal-case' : 'text-[2.4rem]'} ${q.format === 'tf' ? 'rounded-3xl border-2 border-dashed border-steel/50 p-6' : ''}`}>
-      {q.format === 'who' && <span className="mr-3 inline-block a-float" aria-hidden>🕵️</span>}
+    <h2 className={`s-question shrink-0 font-extrabold [overflow-wrap:anywhere] ${who ? 'mystery rounded-2xl px-5 py-3 italic' : ''} ${q.format === 'tf' ? 'rounded-2xl border-2 border-dashed border-line-strong px-5 py-3' : ''}`}>
+      {who && <span className="mr-3 inline-block" aria-hidden>🕵️</span>}
       {q.format === 'tf' ? `„${q.prompt}“` : q.prompt}
     </h2>
   )
+  const state = (i: number) => (sol ? (sol.correct === i ? 'ok' : 'dim') : 'idle')
+  const cardCls = (st: string) => `relative flex min-h-0 items-center gap-4 overflow-hidden rounded-2xl border-2 px-5 py-2 transition-all duration-500 ${st === 'ok' ? 'border-ok bg-ok/20 ring-4 ring-ok' : 'border-line-strong bg-surface'} ${st === 'dim' ? 'opacity-35' : ''}`
 
   if (q.format === 'tf') {
     return (
-      <div className="flex h-full flex-col gap-6">
+      <div className="flex h-full min-h-0 flex-col s-gap">
         {prompt}
-        <div className="grid flex-1 grid-cols-2 gap-6">
-          {q.options!.map((o, i) => {
-            const state = sol ? (sol.correct === i ? 'ok' : 'dim') : 'idle'
-            return (
-              <div key={i} className={`relative grid place-items-center rounded-3xl text-center transition-all duration-500 ${i === 0 ? 'bg-lime text-navy' : 'bg-coral text-navy'} ${state === 'dim' ? 'opacity-25 scale-95' : ''} ${state === 'ok' ? 'ring-8 ring-snow scale-105' : ''}`}>
-                <div><div className="text-[4rem]" aria-hidden>{i === 0 ? '✅' : '🚫'}</div><div className="display text-[3.4rem]">{o}</div>
-                  {counts && <div className="mt-2 text-2xl font-bold">{Math.round((counts[i] / total) * 100)} %</div>}</div>
-              </div>
-            )
-          })}
+        <div className="grid min-h-0 flex-1 grid-cols-2 s-gap">
+          {q.options!.map((o, i) => (
+            <div key={i} className={`${cardCls(state(i))} flex-col justify-center text-center`}>
+              {i === 0 ? <CircleCheck className="h-[clamp(2rem,9vh,4.5rem)] w-auto" strokeWidth={1.75} aria-hidden /> : <CircleX className="h-[clamp(2rem,9vh,4.5rem)] w-auto" strokeWidth={1.75} aria-hidden />}
+              <div className="display text-[clamp(1.75rem,min(4vw,7vh),3.5rem)]">{i === 0 ? 'Fakt' : 'Fake'}{state(i) === 'ok' && <span className="sr-only"> – richtig</span>}</div>
+              {counts && <div className="s-info font-bold">{Math.round((counts[i] / total) * 100)} %</div>}
+            </div>
+          ))}
         </div>
       </div>
     )
   }
 
-  if (q.format === 'mc' || q.format === 'who') {
+  if (q.format === 'mc' || who) {
     return (
-      <div className="flex h-full flex-col gap-6">
+      <div className="flex h-full min-h-0 flex-col s-gap">
         {prompt}
-        <div className={`grid flex-1 gap-4 ${q.format === 'who' ? 'grid-cols-2' : 'grid-cols-2'}`}>
+        <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 s-gap">
           {q.options!.map((o, i) => {
-            const st = OPT_STYLE[i]
-            const state = sol ? (sol.correct === i ? 'ok' : 'dim') : 'idle'
+            const st = state(i)
             return (
-              <div key={i} className={`relative flex items-center gap-4 overflow-hidden rounded-3xl p-5 text-[1.6rem] font-bold leading-snug transition-all duration-500 ${q.format === 'who' ? 'bg-navy3 text-snow' : `${st.bg} ${st.fg}`} ${state === 'dim' ? 'opacity-25' : ''} ${state === 'ok' ? 'ring-8 ring-snow scale-[1.03]' : ''}`}>
-                <span className={`display grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-2xl ${q.format === 'who' ? `${st.bg} ${st.fg}` : 'bg-navy text-snow'}`}>{LETTERS[i]}</span>
-                <span className="min-w-0">{o}{state === 'ok' && ' ✓'}</span>
-                {counts && <span className="absolute bottom-0 left-0 h-2 bg-navy/60" style={{ width: `${(counts[i] / total) * 100}%` }} />}
-                {counts && <span className="ml-auto display text-xl">{counts[i]}</span>}
+              <div key={i} className={cardCls(st)}>
+                <span className="display grid h-[clamp(2rem,6vh,3.25rem)] w-[clamp(2rem,6vh,3.25rem)] shrink-0 place-items-center rounded-xl bg-deep text-gold-light s-answer">{LETTERS[i]}</span>
+                <span className="s-answer min-w-0 flex-1 font-bold [overflow-wrap:anywhere]">{o}{st === 'ok' && <><Check className="ml-2 inline text-ok" size={28} aria-hidden /><span className="sr-only"> – richtig</span></>}</span>
+                {counts && <span className="display s-info shrink-0">{counts[i]}</span>}
+                {counts && <span className="absolute bottom-0 left-0 h-1.5 bg-gold" style={{ width: `${(counts[i] / total) * 100}%` }} />}
               </div>
             )
           })}
@@ -57,21 +62,23 @@ export default function Stage({ q, reveal }: { q: PublicQuestion; reveal: Reveal
 
   if (q.format === 'match') {
     return (
-      <div className="flex h-full flex-col gap-6">
+      <div className="flex h-full min-h-0 flex-col s-gap">
         {prompt}
-        <div className="grid flex-1 grid-cols-[1fr_auto_1fr] items-stretch gap-x-6 gap-y-4">
-          <div className="flex flex-col justify-around gap-4">
+        <div className="grid min-h-0 flex-1 grid-cols-[1fr_auto_1fr] items-stretch gap-x-4">
+          <div className="flex min-h-0 flex-col s-gap">
             {q.lefts!.map((l, i) => (
-              <div key={i} className="flex flex-1 items-center gap-4 rounded-3xl bg-navy3 p-5 text-[1.5rem] font-bold" style={sol ? { borderLeft: `14px solid ${PAIR_COLORS[i]}` } : {}}>{l}</div>
+              <div key={i} className="flex min-h-0 flex-1 items-center gap-3 rounded-2xl border-2 border-line-strong bg-surface px-4 py-2 s-answer font-bold [overflow-wrap:anywhere]" style={sol ? { borderLeft: `12px solid ${PAIR_COLORS[i]}` } : {}}>
+                {sol && <span className="badge-num h-9 w-9 shrink-0 rounded-lg text-lg" style={{ background: PAIR_COLORS[i] }}>{i + 1}</span>}{l}
+              </div>
             ))}
           </div>
-          <div className="grid place-items-center text-4xl text-steel" aria-hidden>⇄</div>
-          <div className="flex flex-col justify-around gap-4">
+          <div className="grid place-items-center text-3xl text-mute" aria-hidden>⇄</div>
+          <div className="flex min-h-0 flex-col s-gap">
             {q.rights!.map((r, k) => {
               const owner = sol?.map ? sol.map.indexOf(k) : -1
               return (
-                <div key={k} className="flex flex-1 items-center rounded-3xl border-2 border-dashed border-sky/60 bg-navy2 p-5 text-[1.5rem] font-bold transition-all" style={owner >= 0 ? { borderStyle: 'solid', borderColor: PAIR_COLORS[owner], borderWidth: 6 } : {}}>
-                  {owner >= 0 && <span className="display mr-3 grid h-10 w-10 place-items-center rounded-xl text-navy" style={{ background: PAIR_COLORS[owner] }}>{owner + 1}</span>}{r}
+                <div key={k} className={`dropzone flex min-h-0 flex-1 items-center gap-3 px-4 py-2 s-answer font-bold [overflow-wrap:anywhere] ${owner >= 0 ? 'is-filled' : ''}`} style={owner >= 0 ? { borderColor: PAIR_COLORS[owner], borderWidth: 4 } : {}}>
+                  {owner >= 0 && <span className="badge-num h-9 w-9 shrink-0 rounded-lg text-lg" style={{ background: PAIR_COLORS[owner] }}>{owner + 1}</span>}{r}
                 </div>
               )
             })}
@@ -85,12 +92,12 @@ export default function Stage({ q, reveal }: { q: PublicQuestion; reveal: Reveal
   // order
   const order = sol?.order
   return (
-    <div className="flex h-full flex-col gap-6">
+    <div className="flex h-full min-h-0 flex-col s-gap">
       {prompt}
-      <div className="flex flex-1 flex-col justify-around gap-3">
+      <div className="flex min-h-0 flex-1 flex-col s-gap">
         {(order ?? q.items!.map((_, i) => i)).map((d, pos) => (
-          <div key={d} className="flex flex-1 items-center gap-5 rounded-3xl bg-navy3 px-6 text-[1.7rem] font-bold transition-all duration-700" style={order ? { background: '#D7FD68', color: '#101522' } : {}}>
-            <span className="display grid h-12 w-12 place-items-center rounded-2xl bg-navy text-snow">{order ? pos + 1 : '?'}</span>{q.items![d]}
+          <div key={d} className={`flex min-h-0 flex-1 items-center gap-4 rounded-2xl border-2 px-5 py-1 s-answer font-bold transition-all duration-700 [overflow-wrap:anywhere] ${order ? 'border-ok bg-ok/20' : 'border-line-strong bg-surface'}`}>
+            <span className="display grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-deep text-gold-light">{order ? pos + 1 : '?'}</span>{q.items![d]}
           </div>
         ))}
       </div>
@@ -102,10 +109,10 @@ export default function Stage({ q, reveal }: { q: PublicQuestion; reveal: Reveal
 function PartsStats({ r }: { r: Reveal }) {
   if (r.stats.kind !== 'parts') return null
   return (
-    <div className="flex gap-4 text-xl font-bold">
-      <span className="rounded-full bg-lime px-4 py-1 text-navy">Alles richtig: {r.stats.full}</span>
-      <span className="rounded-full bg-amber px-4 py-1 text-navy">Teilweise: {r.stats.partial}</span>
-      <span className="rounded-full bg-coral px-4 py-1 text-navy">Nichts: {r.stats.none}</span>
+    <div className="s-info flex shrink-0 flex-wrap gap-3 font-bold">
+      <span className="rounded-full bg-ok px-4 py-1 text-bg">Alles richtig: {r.stats.full}</span>
+      <span className="rounded-full bg-gold-light px-4 py-1 text-bg">Teilweise: {r.stats.partial}</span>
+      <span className="rounded-full bg-bad px-4 py-1 text-bg">Nichts: {r.stats.none}</span>
     </div>
   )
 }
