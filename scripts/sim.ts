@@ -187,7 +187,7 @@ screen.onState = async (s) => {
   if (s.phase === 'INTERMISSION' && s.qIndex >= 0 && !lateJoinTested && s.step > 3) {
     lateJoinTested = true
     const late = new Client('late', { t: 'hello', role: 'player', name: 'Zuspät' }); await late.connect()
-    check(late.errs.includes('closed'), 'Neue Spieler nach Spielstart abgelehnt')
+    check(late.errs.includes('closed_join'), 'Neue Spieler nach Spielstart abgelehnt')
   }
 }
 const done: Record<number, boolean> = {}

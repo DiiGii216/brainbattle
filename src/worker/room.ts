@@ -117,20 +117,22 @@ export class Room extends DurableObject<Env> {
       return
     }
     if (!msg || typeof msg !== 'object') return
-    await this.tick()
+    const ticked = await this.tick()
     const at = (ws.deserializeAttachment() ?? {}) as Attach
-    s.lastActivity = Date.now()
+    const bail = async () => { if (ticked) { await this.save(); this.broadcast() } }
+    if (at.role) s.lastActivity = Date.now()
 
     if (msg.t === 'hello') {
+      if (at.role === 'player' && msg.role === 'player' && msg.name !== undefined) { this.err(ws, 'bad_hello', 'Bereits angemeldet'); return bail() }
       await this.hello(ws, msg)
       return
     }
-    if (!at.role) return this.err(ws, 'no_hello', 'Bitte zuerst anmelden')
+    if (!at.role) { this.err(ws, 'no_hello', 'Bitte zuerst anmelden'); return bail() }
 
     if (msg.t === 'answer' && at.role === 'player' && at.pid) await this.answer(ws, at.pid, msg)
     else if (msg.t === 'word' && at.role === 'player' && at.pid) await this.word(at.pid, msg.w)
     else if (msg.t === 'host') {
-      if (at.role !== 'host') return this.err(ws, 'forbidden', 'Nur der Moderator darf das')
+      if (at.role !== 'host') { this.err(ws, 'forbidden', 'Nur der Moderator darf das'); return bail() }
       await this.hostCmd(msg)
     }
     await this.save()
@@ -150,7 +152,8 @@ export class Room extends DurableObject<Env> {
   async alarm() {
     if (!this.s) return
     await this.tick()
-    if (Date.now() - this.s.lastActivity > this.ttl && this.ctx.getWebSockets().length === 0) {
+    if (Date.now() - this.s.lastActivity > this.ttl) {
+      for (const w of this.ctx.getWebSockets()) { try { w.close(1001, 'Raum abgelaufen') } catch { /* weg */ } }
       await this.ctx.storage.deleteAll()
       this.s = null
       return
@@ -173,7 +176,7 @@ export class Room extends DurableObject<Env> {
         p = Object.values(s.players).find((x) => safeEq(x.token, msg.token!))
         if (!p) return this.err(ws, 'unknown_token', 'Spieler nicht mehr bekannt – bitte neu beitreten')
       } else {
-        if (s.phase !== 'LOBBY') return this.err(ws, 'closed', 'Das Spiel läuft bereits – neue Spieler sind nicht mehr möglich')
+        if (s.phase !== 'LOBBY') return this.err(ws, 'closed_join', 'Das Spiel läuft bereits – neue Spieler sind nicht mehr möglich')
         const name = cleanName(msg.name)
         if (!name) return this.err(ws, 'bad_name', 'Bitte einen Namen eingeben')
         if (s.order.length >= MAX_PLAYERS) return this.err(ws, 'full', 'Der Raum ist voll')
@@ -240,13 +243,16 @@ export class Room extends DurableObject<Env> {
       case 'resume':
         if (s.paused) {
           s.paused = false
-          if (s.remainingMs !== null) s.endsAt = now + s.remainingMs
+          if (s.remainingMs !== null && (s.phase === 'QUESTION' || s.auto)) s.endsAt = now + s.remainingMs
+          else this.arm(now)
           s.remainingMs = null
         }
         break
       case 'auto':
-        s.auto = !!msg.value
-        if (!s.paused) this.arm(now)
+        if (s.auto !== !!msg.value) {
+          s.auto = !!msg.value
+          if (!s.paused) this.arm(now)
+        }
         break
       case 'words':
         s.wordsHidden = !!msg.value
@@ -342,12 +348,15 @@ export class Room extends DurableObject<Env> {
   /** Holt verpasste Fristen nach (Alarm, Hibernation, Neustart). */
   private async tick() {
     const s = this.s
-    if (!s) return
+    let changed = false
+    if (!s) return false
     for (let i = 0; i < 80 && !s.paused && s.endsAt !== null && Date.now() >= s.endsAt; i++) {
       const now = Date.now()
       const at = now - s.endsAt > 2000 ? now : s.endsAt // große Verspätung: keine Kettenreaktion
       this.advance(at)
+      changed = true
     }
+    return changed
   }
 
   // ---------- Persistenz, Alarm, Broadcast ----------
@@ -356,7 +365,7 @@ export class Room extends DurableObject<Env> {
     if (!s) return
     await this.ctx.storage.put('s', s)
     const next = !s.paused && s.endsAt !== null ? s.endsAt : s.lastActivity + this.ttl
-    await this.ctx.storage.setAlarm(Math.max(next, Date.now() + 1))
+    await this.ctx.storage.setAlarm(Math.max(next, Date.now() + (s.endsAt !== null && !s.paused ? 1 : 60_000)))
   }
 
   private send(ws: WebSocket, m: ServerMsg) {
@@ -381,10 +390,13 @@ export class Room extends DurableObject<Env> {
     }))
     const showQ = s.phase === 'QUESTION' || s.phase === 'REVEAL'
     const q = s.qIndex >= 0 ? QUESTIONS[s.qIndex] : null
-    const counts = new Map<string, number>()
+    const counts = new Map<string, { word: string; count: number }>()
     if (s.phase === 'LOBBY')
-      for (const p of Object.values(s.players)) if (p.word) counts.set(p.word.toLowerCase(), (counts.get(p.word.toLowerCase()) ?? 0) + 1)
-    const words = s.wordsHidden ? [] : [...counts].map(([word, count]) => ({ word, count })).slice(0, 60)
+      for (const p of Object.values(s.players)) if (p.word) {
+        const k = p.word.toLowerCase(), c = counts.get(k)
+        counts.set(k, { word: c?.word ?? p.word, count: (c?.count ?? 0) + 1 })
+      }
+    const words = s.wordsHidden ? [] : [...counts.values()].slice(0, 60)
     let you: Snapshot['you'] = null
     if (at.role === 'player' && at.pid && s.players[at.pid]) {
       const p = s.players[at.pid]
@@ -401,7 +413,7 @@ export class Room extends DurableObject<Env> {
       now: Date.now(), endsAt: s.endsAt, remainingMs: s.remainingMs, durationMs: s.durationMs, players,
       answeredCount: Object.keys(s.answers).length,
       question: showQ && q ? publicQuestion(q) : null,
-      upcoming: s.phase === 'INTERMISSION' && q ? { number: q.id, format: q.format, topic: q.topic, level: q.level } : null,
+      upcoming: s.phase === 'INTERMISSION' && s.kind === 'next' && q ? { number: q.id, format: q.format, topic: q.topic, level: q.level } : null,
       reveal: s.phase === 'REVEAL' ? s.reveal : null,
       words, wordsHidden: s.wordsHidden, you,
     }
@@ -411,7 +423,7 @@ export class Room extends DurableObject<Env> {
     if (!this.s) return
     const sockets = this.ctx.getWebSockets()
     const atts = sockets.map((w) => (w.deserializeAttachment() ?? {}) as Attach)
-    const connected = new Set(atts.filter((a) => a.pid).map((a) => a.pid!))
+    const connected = new Set(atts.filter((a, i) => a.pid && sockets[i].readyState === WebSocket.OPEN).map((a) => a.pid!))
     sockets.forEach((ws, i) => {
       if (!atts[i].role) return
       this.send(ws, { t: 'state', s: this.snapshot(atts[i], connected) })

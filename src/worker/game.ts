@@ -133,12 +133,14 @@ export const AVATARS = ['🦊', '🐼', '🦁', '🐙', '🦉', '🐸', '🦄', 
 
 export function cleanName(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
-  const n = raw.replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16)
-  return n.length >= 1 ? n : null
+  const n = raw.normalize('NFKC').replace(/[\u0000-\u001f\u007f<>]|\p{Cf}/gu, '').replace(/\s+/g, ' ').trim()
+  const c = [...n].slice(0, 16).join('')
+  return c.length >= 1 ? c : null
 }
 
 export function cleanWord(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
-  const n = raw.replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24)
-  return n.length >= 1 ? n : null
+  const n = raw.normalize('NFKC').replace(/[\u0000-\u001f\u007f<>]|\p{Cf}/gu, '').replace(/\s+/g, ' ').trim()
+  const c = [...n].slice(0, 24).join('')
+  return c.length >= 1 ? c : null
 }
