@@ -47,16 +47,16 @@ describe('Bewertung', () => {
   it('MC: richtig = volle Punkte, falsch = 0', () => {
     expect(scoreAnswer(q(2), 1).points).toBe(100)
     expect(scoreAnswer(q(2), 0).points).toBe(0)
-    expect(scoreAnswer(q(12), 3).points).toBe(150)
+    expect(scoreAnswer(q(11), 1).points).toBe(150)
     expect(scoreAnswer(q(2), null)).toMatchObject({ points: 0, answered: false })
   })
   it('Fakt/Fake', () => {
-    expect(scoreAnswer(q(3), 0).full).toBe(true) // Fakt
-    expect(scoreAnswer(q(9), 1).full).toBe(true) // Fake
-    expect(scoreAnswer(q(9), 0).points).toBe(0)
+    expect(scoreAnswer(q(6), 0).full).toBe(true) // Fakt
+    expect(scoreAnswer(q(14), 1).full).toBe(true) // Fake
+    expect(scoreAnswer(q(14), 0).points).toBe(0)
   })
   it('Matching: anteilig mit floor', () => {
-    const m = q(11) as Extract<typeof QUESTIONS[number], { format: 'match' }>
+    const m = q(12) as Extract<typeof QUESTIONS[number], { format: 'match' }>
     // korrekte Antwort: für jede linke Zeile Anzeigeindex des passenden Rechts
     const right = m.pairs.map((_, i) => m.rightOrder.indexOf(i))
     expect(scoreAnswer(m, right)).toMatchObject({ points: 150, full: true })
@@ -66,7 +66,7 @@ describe('Bewertung', () => {
     expect(partial(100, 1, 3)).toBe(33)
   })
   it('Ordering: anteilig pro Position', () => {
-    const o = q(8) as Extract<typeof QUESTIONS[number], { format: 'order' }>
+    const o = q(7) as Extract<typeof QUESTIONS[number], { format: 'order' }>
     const right = o.items.map((_, pos) => o.display.indexOf(pos))
     expect(scoreAnswer(o, right)).toMatchObject({ points: 100, full: true })
     const sw = [right[1], right[0], right[2], right[3]]
@@ -78,11 +78,11 @@ describe('Bewertung', () => {
     expect(validateAnswer(q(2), -1)).toBeNull()
     expect(validateAnswer(q(2), '1')).toBeNull()
     expect(validateAnswer(q(2), [1])).toBeNull()
-    expect(validateAnswer(q(3), 2)).toBeNull()
-    expect(validateAnswer(q(11), [0, 0, 1])).toBeNull()
-    expect(validateAnswer(q(11), [0, 1])).toBeNull()
-    expect(validateAnswer(q(8), [0, 1, 2, 9])).toBeNull()
-    expect(validateAnswer(q(8), [0, 1, 2, 3])).toEqual([0, 1, 2, 3])
+    expect(validateAnswer(q(6), 2)).toBeNull()
+    expect(validateAnswer(q(12), [0, 0, 1])).toBeNull()
+    expect(validateAnswer(q(12), [0, 1])).toBeNull()
+    expect(validateAnswer(q(7), [0, 1, 2, 9])).toBeNull()
+    expect(validateAnswer(q(7), [0, 1, 2, 3])).toEqual([0, 1, 2, 3])
   })
   it('Reveal-Statistik', () => {
     const r = buildReveal(q(2), [1, 1, 0], 5)
