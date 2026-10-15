@@ -34,7 +34,7 @@ Basis: KNOW IT 100, PROVE IT 150 (max. 2.500). MC/Fakt/Rätsel: alles oder nicht
 
 ## Fragen bearbeiten
 `src/worker/questions.ts` editieren (Erklärung ≤ 25 Wörter, Test `npm test` prüft Struktur, 2500 Punkte und Zeitbudget).
-**Quellenabgleich:** Folien 3–24 der PDF wurden gelesen und abgeglichen (Konjunkturphasen Folie 16, Kapitalsammelstelle Folie 12–13, BIP Folie 14–15, Industrie 4.0 Folie 19, Aufbau=Statik/Ablauf=Dynamik Folie 3). Als `extern` markiert (nur Namen auf Folie 24, Definitionen/Beispiele ergänzt): Fragen 10, 19, 20.
+**Katalog V3 (Schwerpunkt Personalfachwirt):** 20 Fragen neu eingespielt (Schwierigkeit 1–10 je Frage, Q13/Q16 mit 32 s). Format-Verteilung, Punkte und Zeitbudget unverändert. Der frühere Folienabgleich (`source: 'folien'/'extern'`) gilt für V3 nicht mehr und ist offen.
 
 ## Fortschritt
 - [x] Schritt 1: Projekt, Durable Object, Räume, WebSockets, Lobby-Sync

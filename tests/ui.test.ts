@@ -52,7 +52,7 @@ describe('Matchmaker-Eingabelogik (Tippen und Ziehen teilen sich diese Funktione
     expect(nextFreeLeft([0, 1, 2], 0)).toBeNull()
   })
   it('vollständige Eingabe besteht die Serververifikation und wird korrekt bewertet', () => {
-    const m = QUESTIONS.find((x) => x.id === 11)! as Extract<typeof QUESTIONS[number], { format: 'match' }>
+    const m = QUESTIONS.find((x) => x.id === 12)! as Extract<typeof QUESTIONS[number], { format: 'match' }>
     const right = m.pairs.map((_, i) => m.rightOrder.indexOf(i))
     // Spieler ordnet in beliebiger Reihenfolge zu → gleiche Antwort
     let map: MatchMap = [null, null, null]
@@ -76,19 +76,19 @@ describe('Ordering-Eingabelogik', () => {
     expect(moveSeq(edge, 2, 1)).toBe(edge)
   })
   it('alle Eingabewege ergeben dieselbe, servergültige Antwort', () => {
-    const o = QUESTIONS.find((x) => x.id === 8)! as Extract<typeof QUESTIONS[number], { format: 'order' }>
-    const right = o.items.map((_, pos) => o.display.indexOf(pos)) // [Aufschwung, Boom, Abschwung, Tiefstand] als Anzeigeindizes
+    const o = QUESTIONS.find((x) => x.id === 7)! as Extract<typeof QUESTIONS[number], { format: 'order' }>
+    const right = o.items.map((_, pos) => o.display.indexOf(pos)) // [Aufschwung, Boom, Abschwung, Tiefphase] als Anzeigeindizes
     // Weg A: direkt in richtiger Reihenfolge antippen. Weg B: falsch antippen, dann per Pfeil/Drag-Move korrigieren.
     const a = right.reduce(appendSeq, [] as number[])
     let b = [right[1], right[0], right[3], right[2]].reduce(appendSeq, [] as number[])
     b = moveSeq(b, 1, -1) // Aufschwung nach vorn
-    b = moveSeq(b, 3, -1) // Abschwung vor Tiefstand
+    b = moveSeq(b, 3, -1) // Abschwung vor Tiefphase
     expect(b).toEqual(a)
     expect(validateAnswer(o, b)).toEqual(a)
     expect(scoreAnswer(o, b)).toMatchObject({ points: 100, full: true })
   })
   it('unvollständige Reihenfolge wird vom Server abgelehnt (zusätzlich zur Button-Sperre)', () => {
-    const o = QUESTIONS.find((x) => x.id === 8)!
+    const o = QUESTIONS.find((x) => x.id === 7)!
     expect(validateAnswer(o, [0, 1])).toBeNull()
   })
 })
